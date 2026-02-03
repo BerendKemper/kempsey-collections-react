@@ -1,0 +1,9 @@
+#root {
+  --component-spacing: 16px;
+  width: 100%;
+}
+
+#root {
+  --content-width: max(0px, min(calc(100vw - 20px), 1280px));
+  --side-width: calc((100vw - var(--content-width)) / 2);
+}

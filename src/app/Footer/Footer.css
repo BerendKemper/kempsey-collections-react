@@ -1,0 +1,6 @@
+nav#footer {
+  display: flex;
+  gap: 1em;
+  padding-top: var(--component-spacing);
+  place-items: center;
+}

@@ -1,0 +1,17 @@
+.card {
+  padding: 10px;
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px var(--border-default);
+  text-align: center;
+}
+
+.card img {
+  width: -webkit-fill-available;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  object-position: top;
+}
+
+.card {
+  border: 1px solid var(--border-default);
+}

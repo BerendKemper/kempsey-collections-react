@@ -1,0 +1,5 @@
+nav#header {
+  display: flex;
+  gap: 1em;
+  padding-bottom: var(--component-spacing);
+}

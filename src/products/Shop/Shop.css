@@ -1,0 +1,28 @@
+.shop {
+  display: flex;
+  flex-direction: row;
+  gap: var(--component-spacing);
+}
+
+.shop .filters {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--component-spacing);
+  box-shadow: 0 0 0 1px var(--border-default);
+  padding: var(--component-spacing);
+}
+
+.shop .items {
+  display: grid;
+  gap: var(--component-spacing);
+  grid-template-columns: repeat(auto-fill, 300px);
+  width: -webkit-fill-available;
+  justify-content: center;
+}
+
+/* Testing */
+.shop {
+  gap: unset;
+}

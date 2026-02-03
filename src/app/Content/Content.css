@@ -1,0 +1,16 @@
+main#content {
+  padding: 1px;
+  flex: 1;
+}
+
+/* Testing */
+main#content {
+  padding: 1px var(--side-width);
+  margin: 0 calc(-1 * var(--side-width));
+  overflow-y: scroll;
+}
+
+main#content :where(#top, #bottom) {
+  /* height: 250px; */
+  display: none;
+}

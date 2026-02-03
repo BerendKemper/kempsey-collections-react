@@ -1,0 +1,9 @@
+.toggle {
+  border: unset;
+  padding: unset;
+}
+
+.toggle.pill-shape {
+  aspect-ratio: 2/1;
+  border-radius: 40%;
+}
