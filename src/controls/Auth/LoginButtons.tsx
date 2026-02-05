@@ -3,7 +3,7 @@ import "./LoginButtons.css";
 
 const GOOGLE_AUTH_URL = `https://accounts.google.com/o/oauth2/v2/auth`;
 const MICROSOFT_AUTH_URL = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize`;
-const AUTH_API_ORIGIN = import.meta.env.VITE_AUTH_API_ORIGIN ?? `https://api.emperjs.com`;
+const AUTH_API_ORIGIN = import.meta.env.VITE_AUTH_API_ORIGIN;
 
 type SessionState = {
   authenticated: boolean;
