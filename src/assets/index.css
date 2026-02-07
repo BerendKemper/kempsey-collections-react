@@ -67,6 +67,7 @@ button {
   cursor: pointer;
   transition: border-color 0.25s background-color 0.25s;
   background-color: var(--interactive-bg-primary-default);
+  color: var(--interactive-label-primary-default);
   box-shadow: 0 0 0 1px var(--interactive-border-secondary-default);
 }
 
