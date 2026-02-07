@@ -1,45 +1,26 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useSession } from "./useSession";
 import "./LoginButtons.css";
 
 const GOOGLE_AUTH_URL = `https://accounts.google.com/o/oauth2/v2/auth`;
 const MICROSOFT_AUTH_URL = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize`;
 const AUTH_API_ORIGIN = import.meta.env.VITE_AUTH_API_ORIGIN;
 
-type SessionState = {
-  authenticated: boolean;
-  provider?: string;
-};
-
 export function LoginButtons() {
   const [isOpen, setIsOpen] = useState(false);
-  const [session, setSession] = useState<SessionState | null>(null);
-  const [isLoadingSession, setIsLoadingSession] = useState(true);
+  const { session, isLoading } = useSession();
 
-  const sessionEndpoint = useMemo(() => `${AUTH_API_ORIGIN}/auth/session`, []);
+  const signedInLabel = useMemo(() => {
+    if (!session?.authenticated) {
+      return null;
+    }
 
-  useEffect(() => {
-    const loadSession = async () => {
-      try {
-        const response = await fetch(sessionEndpoint, {
-          credentials: `include`,
-        });
+    if (session.displayName) {
+      return `Signed in as ${session.displayName}`;
+    }
 
-        if (!response.ok) {
-          throw new Error(`Session check failed: ${response.status}`);
-        }
-
-        const data = (await response.json()) as SessionState;
-        setSession(data);
-      } catch (error) {
-        console.error(`Failed to load session`, error);
-        setSession({ authenticated: false });
-      } finally {
-        setIsLoadingSession(false);
-      }
-    };
-
-    void loadSession();
-  }, [sessionEndpoint]);
+    return `Signed in`;
+  }, [session]);
 
   const googleLogin = () => {
     const params = new URLSearchParams({
@@ -65,14 +46,14 @@ export function LoginButtons() {
     window.location.href = `${MICROSOFT_AUTH_URL}?${params}`;
   };
 
-  if (isLoadingSession) {
+  if (isLoading) {
     return <div className="login-status">Checking session...</div>;
   }
 
   if (session?.authenticated) {
     return (
       <div className="login-status" title={session.provider ? `Signed in with ${session.provider}` : undefined}>
-        Signed in
+        {signedInLabel}
       </div>
     );
   }
