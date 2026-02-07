@@ -1,0 +1,152 @@
+.admin-users {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px 0 48px;
+}
+
+.admin-users__header h1 {
+  margin: 0 0 8px;
+  font-size: 2rem;
+}
+
+.admin-users__header p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.admin-users__signin {
+  max-width: 320px;
+}
+
+.admin-users__layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.6fr) minmax(0, 1.4fr);
+  gap: 24px;
+}
+
+@media (max-width: 900px) {
+  .admin-users__layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-users__filters {
+  background: rgba(148, 163, 184, 0.08);
+  border-radius: 16px;
+  border: 1px solid var(--interactive-border-secondary-default);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.admin-users__filters h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.admin-users__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.admin-users__field input {
+  border-radius: 10px;
+  border: 1px solid var(--interactive-border-secondary-default);
+  background: transparent;
+  padding: 10px 12px;
+  color: inherit;
+}
+
+.admin-users__notes {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+.admin-users__notes p {
+  margin: 0 0 6px;
+}
+
+.admin-users__list {
+  background: var(--bg-primary);
+  border-radius: 16px;
+  border: 1px solid var(--interactive-border-secondary-default);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.admin-users__list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.admin-users__list-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.admin-users__table {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-users__row {
+  display: grid;
+  grid-template-columns: 1.2fr 1.6fr 1.2fr 0.7fr;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.admin-users__row--header {
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.admin-users__roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-users__status {
+  text-transform: capitalize;
+  font-weight: 600;
+}
+
+.admin-users__status--active {
+  color: #38a169;
+}
+
+.admin-users__status--disabled {
+  color: #e53e3e;
+}
+
+.admin-users__empty {
+  border: 1px dashed rgba(148, 163, 184, 0.4);
+  padding: 24px;
+  border-radius: 12px;
+  color: var(--text-secondary);
+}
+
+.admin-users__empty p {
+  margin: 0 0 6px;
+}
+
+.role-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  font-size: 0.85rem;
+  font-weight: 600;
+}

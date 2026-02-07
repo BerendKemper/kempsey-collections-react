@@ -1,5 +1,14 @@
 nav#header {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
   gap: 1em;
   padding-bottom: var(--component-spacing);
+}
+
+.header-links {
+  display: flex;
+  gap: 1em;
+  align-items: center;
+  flex-wrap: wrap;
 }

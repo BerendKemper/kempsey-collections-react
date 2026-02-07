@@ -1,0 +1,124 @@
+.user-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px 0 48px;
+}
+
+.user-settings__header h1 {
+  margin: 0 0 8px;
+  font-size: 2rem;
+}
+
+.user-settings__header p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.user-settings__signin {
+  max-width: 320px;
+}
+
+.user-settings__grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.user-settings__card {
+  background: var(--bg-primary);
+  border-radius: 16px;
+  border: 1px solid var(--interactive-border-secondary-default);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+}
+
+.user-settings__card--secondary {
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.user-settings__card-header h2 {
+  margin: 0 0 6px;
+  font-size: 1.3rem;
+}
+
+.user-settings__card-header p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.user-settings__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.user-settings__field input {
+  border-radius: 10px;
+  border: 1px solid var(--interactive-border-secondary-default);
+  background: transparent;
+  padding: 10px 12px;
+  color: inherit;
+}
+
+.user-settings__field input:focus {
+  outline: 2px solid var(--interactive-border-secondary-hover);
+}
+
+.user-settings__field small {
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.user-settings__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.user-settings__status {
+  margin: 0;
+  font-weight: 600;
+}
+
+.user-settings__status--success {
+  color: #38a169;
+}
+
+.user-settings__status--error {
+  color: #e53e3e;
+}
+
+.user-settings__status--saving {
+  color: var(--text-secondary);
+}
+
+.user-settings__roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.role-pill {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.user-settings__empty {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.user-settings__hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
