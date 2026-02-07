@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { LoginButtons } from "../controls/Auth/LoginButtons";
 import { useSession } from "../controls/Auth/useSession";
 import { ToggleDarkMode } from "../controls/ToggleDarkMode/ToggleDarkMode";
@@ -7,21 +7,21 @@ import "./UserSettingsPage.css";
 const AUTH_API_ORIGIN = import.meta.env.VITE_AUTH_API_ORIGIN;
 
 type StatusState = {
-  tone: "idle" | "success" | "error" | "saving";
+  tone: `idle` | `success` | `error` | `saving`;
   message: string;
 };
 
 export function UserSettingsPage() {
   const { session, isLoading, refreshSession } = useSession();
-  const [displayName, setDisplayName] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [status, setStatus] = useState<StatusState>({ tone: "idle", message: "" });
+  const [displayName, setDisplayName] = useState(``);
+  const [phoneNumber, setPhoneNumber] = useState(``);
+  const [status, setStatus] = useState<StatusState>({ tone: `idle`, message: `` });
 
   const isAuthenticated = session?.authenticated;
 
   useEffect(() => {
     if (isAuthenticated) {
-      setDisplayName(session?.displayName ?? "");
+      setDisplayName(session?.displayName ?? ``);
     }
   }, [isAuthenticated, session?.displayName]);
 
@@ -34,7 +34,7 @@ export function UserSettingsPage() {
       return;
     }
 
-    setStatus({ tone: "saving", message: "Saving your display name..." });
+    setStatus({ tone: `saving`, message: `Saving your display name...` });
 
     try {
       const trimmedName = displayName.trim();
@@ -43,11 +43,11 @@ export function UserSettingsPage() {
       };
 
       const response = await fetch(`${AUTH_API_ORIGIN}/users/me/display-name`, {
-        method: "PATCH",
+        method: `PATCH`,
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": `application/json`,
         },
-        credentials: "include",
+        credentials: `include`,
         body: JSON.stringify(payload),
       });
 
@@ -58,10 +58,10 @@ export function UserSettingsPage() {
       await response.json();
       await refreshSession();
 
-      setStatus({ tone: "success", message: "Display name updated." });
+      setStatus({ tone: `success`, message: `Display name updated.` });
     } catch (caughtError) {
-      const message = caughtError instanceof Error ? caughtError.message : "Something went wrong.";
-      setStatus({ tone: "error", message });
+      const message = caughtError instanceof Error ? caughtError.message : `Something went wrong.`;
+      setStatus({ tone: `error`, message });
     }
   };
 
@@ -127,12 +127,12 @@ export function UserSettingsPage() {
 
           <label className="user-settings__field">
             <span>Email</span>
-            <input type="email" value={session?.email ?? "Not available yet"} readOnly />
+            <input type="email" value={session?.email ?? `Not available yet`} readOnly />
             <small>Email comes from your sign-in provider.</small>
           </label>
 
           <div className="user-settings__actions">
-            <button type="submit" disabled={status.tone === "saving"}>
+            <button type="submit" disabled={status.tone === `saving`}>
               Save display name
             </button>
             {status.message ? (
