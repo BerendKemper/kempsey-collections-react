@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { LoginButtons } from "../controls/Auth/LoginButtons";
 import { useSession } from "../controls/Auth/useSession";
+import { ToggleDarkMode } from "../controls/ToggleDarkMode/ToggleDarkMode";
 import "./UserSettingsPage.css";
 
 const AUTH_API_ORIGIN = import.meta.env.VITE_AUTH_API_ORIGIN;
@@ -161,6 +162,17 @@ export function UserSettingsPage() {
           <p className="user-settings__hint">
             Roles can only be changed by an administrator through the admin console.
           </p>
+        </aside>
+
+        <aside className="user-settings__card user-settings__card--secondary">
+          <div className="user-settings__card-header">
+            <h2>Appearance</h2>
+            <p>Switch between light and dark themes.</p>
+          </div>
+          <div className="user-settings__toggle-row">
+            <span className="user-settings__toggle-label">Dark mode</span>
+            <ToggleDarkMode />
+          </div>
         </aside>
       </div>
     </section>
