@@ -54,7 +54,7 @@ export function AdminUsersPage() {
         }
 
         const payload = (await response.json()) as { users?: UsersApiRecord[] };
-        const nextUsers = (payload.users ?? []).map(user => ({
+        const nextUsers = (payload.users ?? []).map<UserRecord>(user => ({
           id: user.id,
           name: user.display_name?.trim() ? user.display_name : user.email,
           email: user.email,
