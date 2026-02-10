@@ -6,6 +6,13 @@ import type {
 
 const API_ORIGIN = import.meta.env.VITE_AUTH_API_ORIGIN;
 
+export interface ShopProductQuery {
+  name?: string;
+  tags?: string[];
+  currency?: string;
+  isActive?: 0 | 1;
+}
+
 async function parseJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
     throw new Error(await response.text());
@@ -13,8 +20,40 @@ async function parseJson<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export async function fetchShopProducts(): Promise<ShopProduct[]> {
-  const response = await fetch(`${API_ORIGIN}/shop/products`, {
+function buildShopProductQueryString(query?: ShopProductQuery): string {
+  if (!query) return ``;
+
+  const params = new URLSearchParams();
+  const name = query.name?.trim();
+  if (name) params.set(`name`, name);
+
+  if (Array.isArray(query.tags)) {
+    const normalizedTags = [...new Set(
+      query.tags
+        .map(tag => tag.trim().toLowerCase())
+        .filter(Boolean)
+    )];
+
+    for (const tag of normalizedTags) {
+      params.append(`tags`, tag);
+    }
+  }
+
+  if (query.currency?.trim()) {
+    params.set(`currency`, query.currency.trim().toUpperCase());
+  }
+
+  if (typeof query.isActive === `number`) {
+    params.set(`is_active`, String(query.isActive));
+  }
+
+  const queryString = params.toString();
+  return queryString ? `?${queryString}` : ``;
+}
+
+export async function fetchShopProducts(query?: ShopProductQuery): Promise<ShopProduct[]> {
+  const queryString = buildShopProductQueryString(query);
+  const response = await fetch(`${API_ORIGIN}/shop/products${queryString}`, {
     credentials: `include`,
   });
   const data = await parseJson<{ products: ShopProduct[] }>(response);

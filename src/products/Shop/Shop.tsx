@@ -8,6 +8,7 @@ type SortKey = `date` | `priceAsc` | `priceDesc` | `name`;
 
 export function Shop() {
   const [products, setProducts] = useState<ShopProduct[]>([]);
+  const [allProducts, setAllProducts] = useState<ShopProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,41 +19,62 @@ export function Shop() {
   const [sortBy, setSortBy] = useState<SortKey>(`date`);
 
   useEffect(() => {
-    const load = async () => {
-      setIsLoading(true);
-      setError(null);
+    const loadAllProductsForTagFacets = async () => {
       try {
         const data = await fetchShopProducts();
-        setProducts(data);
-      } catch (caughtError) {
-        const message = caughtError instanceof Error ? caughtError.message : `Failed to load products`;
-        setError(message);
-      } finally {
-        setIsLoading(false);
+        setAllProducts(data);
+      } catch {
+        setAllProducts([]);
       }
     };
 
-    void load();
+    void loadAllProductsForTagFacets();
   }, []);
 
+  useEffect(() => {
+    let isCancelled = false;
+
+    const timeoutId = setTimeout(() => {
+      const load = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+          const data = await fetchShopProducts({
+            name: search,
+            tags: selectedTags,
+          });
+
+          if (!isCancelled) {
+            setProducts(data);
+          }
+        } catch (caughtError) {
+          if (!isCancelled) {
+            const message = caughtError instanceof Error ? caughtError.message : `Failed to load products`;
+            setError(message);
+          }
+        } finally {
+          if (!isCancelled) {
+            setIsLoading(false);
+          }
+        }
+      };
+
+      void load();
+    }, 250);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [search, selectedTags]);
+
   const availableTags = useMemo(() => {
-    const allTags = products.flatMap(product => product.tags);
+    const allTags = allProducts.flatMap(product => product.tags);
     return [...new Set(allTags)].sort((a, b) => a.localeCompare(b));
-  }, [products]);
+  }, [allProducts]);
 
   const filteredProducts = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
     const filtered = products
-      .filter(product => {
-        if (!query) return true;
-        const haystack = `${product.name} ${product.description ?? ``}`.toLowerCase();
-        return haystack.includes(query);
-      })
-      .filter(product => {
-        if (selectedTags.length === 0) return true;
-        return selectedTags.every(tag => product.tags.includes(tag));
-      })
       .filter(product => (minPrice !== null ? product.priceCents >= minPrice * 100 : true))
       .filter(product => (maxPrice !== null ? product.priceCents <= maxPrice * 100 : true));
 
@@ -64,7 +86,7 @@ export function Shop() {
     });
 
     return filtered;
-  }, [maxPrice, minPrice, products, search, selectedTags, sortBy]);
+  }, [maxPrice, minPrice, products, sortBy]);
 
   const toggleTag = (tag: string) => {
     setSelectedTags(current => (current.includes(tag) ? current.filter(value => value !== tag) : [...current, tag]));
@@ -89,7 +111,7 @@ export function Shop() {
         <aside className="shop-filters">
           <div className="shop-filters__row">
             <label htmlFor="shop-search">Search</label>
-            <input id="shop-search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search by name or description" />
+            <input id="shop-search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search by product name" />
           </div>
 
           <div className="shop-filters__row">
