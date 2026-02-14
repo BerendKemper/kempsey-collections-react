@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   createShopArticle,
   deleteShopArticle,
@@ -34,13 +34,17 @@ function parseTags(value: string): string[] {
 
 export function ShopArticlePage() {
   const { slug } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const { session } = useSession();
   const isAdmin = session?.roles?.includes(`admin`) || session?.roles?.includes(`owner`);
-  const isCreateMode = slug === `new`;
+  const isCreateMode = slug === `new` || location.pathname === `/shop/articles/new`;
 
   const [article, setArticle] = useState<ShopProduct | null>(null);
-  const [status, setStatus] = useState<{ tone: StatusTone; message: string }>({ tone: `loading`, message: `Loading article...` });
+  const [status, setStatus] = useState<{ tone: StatusTone; message: string }>({
+    tone: isCreateMode ? `idle` : `loading`,
+    message: isCreateMode ? `` : `Loading article...`
+  });
   const [isEditing, setIsEditing] = useState(isCreateMode);
   const [file, setFile] = useState<File | null>(null);
 
@@ -58,6 +62,18 @@ export function ShopArticlePage() {
 
   useEffect(() => {
     if (isCreateMode) {
+      setArticle(null);
+      setName(``);
+      setSlugInput(``);
+      setDescription(``);
+      setPrice(null);
+      setCurrency(`EUR`);
+      setTagsInput(``);
+      setIsActive(true);
+      setImageId(null);
+      setImageUrl(null);
+      setFile(null);
+      setIsEditing(true);
       setStatus({ tone: `idle`, message: `` });
       return;
     }
