@@ -1,5 +1,7 @@
 import type {
   CreateShopProductPayload,
+  ShopFiltersResponse,
+  ShopProductsPage,
   ShopProduct,
   UploadedImage
 } from "../types/shop";
@@ -13,6 +15,9 @@ export interface ShopProductQuery {
   maxPriceCents?: number;
   currency?: string;
   isActive?: 0 | 1;
+  page?: number;
+  pageSize?: number;
+  sort?: string;
 }
 
 async function parseJson<T>(response: Response): Promise<T> {
@@ -35,9 +40,8 @@ function buildShopProductQueryString(query?: ShopProductQuery): string {
         .map(tag => tag.trim().toLowerCase())
         .filter(Boolean)
     )];
-
-    for (const tag of normalizedTags) {
-      params.append(`tags`, tag);
+    if (normalizedTags.length > 0) {
+      params.set(`tags`, normalizedTags.join(`,`));
     }
   }
 
@@ -63,17 +67,47 @@ function buildShopProductQueryString(query?: ShopProductQuery): string {
     params.set(`is_active`, String(query.isActive));
   }
 
+  if (typeof query.page === `number`) {
+    if (!Number.isSafeInteger(query.page) || query.page < 1) {
+      throw new Error(`page must be a positive safe integer`);
+    }
+    params.set(`page`, String(query.page));
+  }
+
+  if (typeof query.pageSize === `number`) {
+    if (!Number.isSafeInteger(query.pageSize) || query.pageSize < 1) {
+      throw new Error(`pageSize must be a positive safe integer`);
+    }
+    params.set(`pageSize`, String(query.pageSize));
+  }
+
+  if (query.sort?.trim()) {
+    params.set(`sort`, query.sort.trim());
+  }
+
   const queryString = params.toString();
   return queryString ? `?${queryString}` : ``;
 }
 
 export async function fetchShopProducts(query?: ShopProductQuery): Promise<ShopProduct[]> {
+  const page = await fetchShopProductsPage(query);
+  return page.data;
+}
+
+export async function fetchShopProductsPage(query?: ShopProductQuery): Promise<ShopProductsPage> {
   const queryString = buildShopProductQueryString(query);
   const response = await fetch(`${API_ORIGIN}/shop/products${queryString}`, {
     credentials: `include`,
   });
-  const data = await parseJson<{ products: ShopProduct[] }>(response);
-  return data.products ?? [];
+  return parseJson<ShopProductsPage>(response);
+}
+
+export async function fetchShopFilters(query?: ShopProductQuery): Promise<ShopFiltersResponse> {
+  const queryString = buildShopProductQueryString(query);
+  const response = await fetch(`${API_ORIGIN}/shop/filters${queryString}`, {
+    credentials: `include`,
+  });
+  return parseJson<ShopFiltersResponse>(response);
 }
 
 export async function uploadProductImage(file: File): Promise<UploadedImage> {

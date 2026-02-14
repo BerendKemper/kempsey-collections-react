@@ -13,6 +13,36 @@ export interface ShopProduct {
   updatedAt: number;
 }
 
+export interface ProductSortRule {
+  field: string;
+  direction: `asc` | `desc`;
+}
+
+export interface ShopProductsPage {
+  page: {
+    index: number;
+    size: number;
+    totalItems: number;
+    totalPages: number;
+    hasPrev: boolean;
+    hasNext: boolean;
+  };
+  sort: ProductSortRule[];
+  data: ShopProduct[];
+}
+
+export interface ShopFilterOption {
+  value: string;
+  count: number;
+}
+
+export interface ShopFiltersResponse {
+  tags: ShopFilterOption[];
+  currencies: ShopFilterOption[];
+  updatedAt: number;
+  cacheTtlSeconds: number;
+}
+
 export interface CreateShopProductPayload {
   slug: string;
   name: string;

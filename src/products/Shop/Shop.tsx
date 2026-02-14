@@ -1,64 +1,157 @@
 import { useEffect, useMemo, useState } from "react";
-import { fetchShopProducts } from "../../services/shopApi";
-import type { ShopProduct } from "../../types/shop";
+import { fetchShopFilters, fetchShopProductsPage } from "../../services/shopApi";
+import type { ShopFilterOption, ShopProduct } from "../../types/shop";
 import { ShopCard } from "../ShopCard/ShopCard";
 import "./Shop.css";
 
-type SortKey = `date` | `priceAsc` | `priceDesc` | `name`;
+type SortKey = `date` | `priceAsc` | `priceDesc` | `name` | `priceCurrency` | `priceUpdated`;
+
 type AppliedFilters = {
   search: string;
   selectedTags: string[];
   minPriceCents: number | null;
   maxPriceCents: number | null;
+  sortBy: SortKey;
+  page: number;
+  pageSize: number;
 };
+
+type PageState = {
+  index: number;
+  size: number;
+  totalItems: number;
+  totalPages: number;
+  hasPrev: boolean;
+  hasNext: boolean;
+};
+
+const FILTERS_CACHE_KEY = `shop:filters:v1`;
+const FILTERS_CACHE_TTL_MS = 10 * 60 * 1000;
+
+const DEFAULT_PAGE_STATE: PageState = {
+  index: 1,
+  size: 24,
+  totalItems: 0,
+  totalPages: 0,
+  hasPrev: false,
+  hasNext: false,
+};
+
+const SORT_TO_QUERY: Record<SortKey, string> = {
+  date: `created_at:desc`,
+  priceAsc: `price_cents:asc,updated_at:desc`,
+  priceDesc: `price_cents:desc,updated_at:desc`,
+  name: `name:asc,updated_at:desc`,
+  priceCurrency: `price_cents:asc,currency:asc`,
+  priceUpdated: `price_cents:asc,updated_at:desc`,
+};
+
+function normalizeTagSelection(tags: string[]): string[] {
+  return [...new Set(tags)].sort((a, b) => a.localeCompare(b));
+}
+
+function normalizePriceToCents(value: number | null): number | null {
+  if (value === null || Number.isNaN(value)) return null;
+  if (value < 0) return 0;
+  return Math.round(value * 100);
+}
+
+function readCachedTags(): ShopFilterOption[] {
+  try {
+    const raw = sessionStorage.getItem(FILTERS_CACHE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as { tags?: ShopFilterOption[]; expiresAt?: number };
+    if (!parsed.expiresAt || parsed.expiresAt < Date.now()) return [];
+    return Array.isArray(parsed.tags) ? parsed.tags : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeCachedTags(tags: ShopFilterOption[]): void {
+  try {
+    sessionStorage.setItem(
+      FILTERS_CACHE_KEY,
+      JSON.stringify({
+        tags,
+        expiresAt: Date.now() + FILTERS_CACHE_TTL_MS,
+      })
+    );
+  } catch {
+    // Ignore cache write failures
+  }
+}
 
 export function Shop() {
   const [products, setProducts] = useState<ShopProduct[]>([]);
-  const [allProducts, setAllProducts] = useState<ShopProduct[]>([]);
+  const [pageState, setPageState] = useState<PageState>(DEFAULT_PAGE_STATE);
+  const [availableTags, setAvailableTags] = useState<ShopFilterOption[]>(readCachedTags);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingFilters, setIsLoadingFilters] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tagSearch, setTagSearch] = useState(``);
 
   const [draftSearch, setDraftSearch] = useState(``);
   const [draftSelectedTags, setDraftSelectedTags] = useState<string[]>([]);
+  const [draftMinPrice, setDraftMinPrice] = useState<number | null>(null);
+  const [draftMaxPrice, setDraftMaxPrice] = useState<number | null>(null);
+  const [draftSortBy, setDraftSortBy] = useState<SortKey>(`date`);
+  const [draftPageSize, setDraftPageSize] = useState(24);
+
   const [appliedFilters, setAppliedFilters] = useState<AppliedFilters>({
     search: ``,
     selectedTags: [],
     minPriceCents: null,
     maxPriceCents: null,
+    sortBy: `date`,
+    page: 1,
+    pageSize: 24,
   });
-  const [draftMinPrice, setDraftMinPrice] = useState<number | null>(null);
-  const [draftMaxPrice, setDraftMaxPrice] = useState<number | null>(null);
-  const [sortBy, setSortBy] = useState<SortKey>(`date`);
 
   useEffect(() => {
-    const loadAllProductsForTagFacets = async () => {
+    let cancelled = false;
+    const loadFilters = async () => {
+      setIsLoadingFilters(true);
       try {
-        const data = await fetchShopProducts();
-        setAllProducts(data);
+        const data = await fetchShopFilters({ isActive: 1 });
+        if (cancelled) return;
+        setAvailableTags(data.tags);
+        writeCachedTags(data.tags);
       } catch {
-        setAllProducts([]);
+        // Use cached values if request fails
+      } finally {
+        if (!cancelled) setIsLoadingFilters(false);
       }
     };
 
-    void loadAllProductsForTagFacets();
+    void loadFilters();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
     let isCancelled = false;
 
-    const load = async () => {
+    const loadPage = async () => {
       setIsLoading(true);
       setError(null);
+
       try {
-        const data = await fetchShopProducts({
+        const response = await fetchShopProductsPage({
           name: appliedFilters.search,
           tags: appliedFilters.selectedTags,
           minPriceCents: appliedFilters.minPriceCents ?? undefined,
           maxPriceCents: appliedFilters.maxPriceCents ?? undefined,
+          isActive: 1,
+          page: appliedFilters.page,
+          pageSize: appliedFilters.pageSize,
+          sort: SORT_TO_QUERY[appliedFilters.sortBy],
         });
 
         if (!isCancelled) {
-          setProducts(data);
+          setProducts(response.data);
+          setPageState(response.page);
         }
       } catch (caughtError) {
         if (!isCancelled) {
@@ -72,41 +165,18 @@ export function Shop() {
       }
     };
 
-    void load();
-
+    void loadPage();
     return () => {
       isCancelled = true;
     };
   }, [appliedFilters]);
 
-  const availableTags = useMemo(() => {
-    const allTags = allProducts.flatMap(product => product.tags);
-    return [...new Set(allTags)].sort((a, b) => a.localeCompare(b));
-  }, [allProducts]);
+  const filteredTagOptions = useMemo(() => {
+    const search = tagSearch.trim().toLowerCase();
+    if (!search) return availableTags;
+    return availableTags.filter(tag => tag.value.toLowerCase().includes(search));
+  }, [availableTags, tagSearch]);
 
-  const sortedProducts = useMemo(() => {
-    const filtered = [...products];
-
-    filtered.sort((a, b) => {
-      if (sortBy === `priceAsc`) return a.priceCents - b.priceCents;
-      if (sortBy === `priceDesc`) return b.priceCents - a.priceCents;
-      if (sortBy === `name`) return a.name.localeCompare(b.name);
-      return b.createdAt - a.createdAt;
-    });
-
-    return filtered;
-  }, [products, sortBy]);
-
-  const toggleTag = (tag: string) => {
-    setDraftSelectedTags(current => (current.includes(tag) ? current.filter(value => value !== tag) : [...current, tag]));
-  };
-
-  const normalizeTagSelection = (tags: string[]): string[] => [...new Set(tags)].sort((a, b) => a.localeCompare(b));
-  const normalizePriceToCents = (value: number | null): number | null => {
-    if (value === null || Number.isNaN(value)) return null;
-    if (value < 0) return 0;
-    return Math.round(value * 100);
-  };
   const draftMinPriceCents = normalizePriceToCents(draftMinPrice);
   const draftMaxPriceCents = normalizePriceToCents(draftMaxPrice);
   const hasInvalidPriceRange =
@@ -117,33 +187,45 @@ export function Shop() {
   const hasPendingFilterChanges = useMemo(() => {
     const normalizedDraftTags = normalizeTagSelection(draftSelectedTags);
     const normalizedAppliedTags = normalizeTagSelection(appliedFilters.selectedTags);
+
     return (
       draftSearch.trim() !== appliedFilters.search ||
       normalizedDraftTags.join(`,`) !== normalizedAppliedTags.join(`,`) ||
       draftMinPriceCents !== appliedFilters.minPriceCents ||
-      draftMaxPriceCents !== appliedFilters.maxPriceCents
+      draftMaxPriceCents !== appliedFilters.maxPriceCents ||
+      draftSortBy !== appliedFilters.sortBy ||
+      draftPageSize !== appliedFilters.pageSize
     );
   }, [
     appliedFilters.maxPriceCents,
     appliedFilters.minPriceCents,
+    appliedFilters.pageSize,
     appliedFilters.search,
     appliedFilters.selectedTags,
+    appliedFilters.sortBy,
     draftMaxPriceCents,
     draftMinPriceCents,
+    draftPageSize,
     draftSearch,
-    draftSelectedTags
+    draftSelectedTags,
+    draftSortBy
   ]);
 
+  const toggleTag = (tag: string) => {
+    setDraftSelectedTags(current => (current.includes(tag) ? current.filter(value => value !== tag) : [...current, tag]));
+  };
+
   const applyFilters = () => {
-    if (hasInvalidPriceRange) {
-      return;
-    }
+    if (hasInvalidPriceRange) return;
 
     setAppliedFilters({
       search: draftSearch.trim(),
       selectedTags: normalizeTagSelection(draftSelectedTags),
       minPriceCents: draftMinPriceCents,
       maxPriceCents: draftMaxPriceCents,
+      sortBy: draftSortBy,
+      page: 1,
+      pageSize: draftPageSize,
     });
   };
 
@@ -152,15 +234,43 @@ export function Shop() {
     setDraftSelectedTags([]);
     setDraftMinPrice(null);
     setDraftMaxPrice(null);
-    setAppliedFilters({ search: ``, selectedTags: [], minPriceCents: null, maxPriceCents: null });
-    setSortBy(`date`);
+    setDraftSortBy(`date`);
+    setDraftPageSize(24);
+    setTagSearch(``);
+    setAppliedFilters({
+      search: ``,
+      selectedTags: [],
+      minPriceCents: null,
+      maxPriceCents: null,
+      sortBy: `date`,
+      page: 1,
+      pageSize: 24,
+    });
   };
+
+  const goToPage = (page: number) => {
+    if (page < 1 || (pageState.totalPages > 0 && page > pageState.totalPages)) return;
+    setAppliedFilters(current => ({ ...current, page }));
+  };
+
+  const pageIndexes = useMemo(() => {
+    if (pageState.totalPages <= 0) return [];
+    const maxButtons = 8;
+    const half = Math.floor(maxButtons / 2);
+    let start = Math.max(1, pageState.index - half);
+    let end = start + maxButtons - 1;
+    if (end > pageState.totalPages) {
+      end = pageState.totalPages;
+      start = Math.max(1, end - maxButtons + 1);
+    }
+    return Array.from({ length: end - start + 1 }, (_, idx) => start + idx);
+  }, [pageState.index, pageState.totalPages]);
 
   return (
     <section className="shop-view">
       <header className="shop-view__header">
         <h1>Shop collection</h1>
-        <p>Browse all active products and refine with tags, search, and price.</p>
+        <p>Browse active products with server-side filtering, sorting, and pagination.</p>
       </header>
 
       <div className="shop-view__layout">
@@ -172,9 +282,7 @@ export function Shop() {
               value={draftSearch}
               onChange={event => setDraftSearch(event.target.value)}
               onKeyDown={event => {
-                if (event.key === `Enter`) {
-                  applyFilters();
-                }
+                if (event.key === `Enter`) applyFilters();
               }}
               placeholder="Search by product name"
             />
@@ -206,26 +314,50 @@ export function Shop() {
 
           <div className="shop-filters__row">
             <label htmlFor="shop-sort">Sort</label>
-            <select id="shop-sort" value={sortBy} onChange={event => setSortBy(event.target.value as SortKey)}>
+            <select id="shop-sort" value={draftSortBy} onChange={event => setDraftSortBy(event.target.value as SortKey)}>
               <option value="date">Newest</option>
               <option value="priceAsc">Price low to high</option>
               <option value="priceDesc">Price high to low</option>
               <option value="name">Name</option>
+              <option value="priceCurrency">Price, then currency</option>
+              <option value="priceUpdated">Price, then updated</option>
+            </select>
+          </div>
+
+          <div className="shop-filters__row">
+            <label htmlFor="shop-page-size">Page size</label>
+            <select
+              id="shop-page-size"
+              value={draftPageSize}
+              onChange={event => setDraftPageSize(Number(event.target.value))}
+            >
+              <option value={24}>24</option>
+              <option value={48}>48</option>
+              <option value={72}>72</option>
             </select>
           </div>
 
           <div className="shop-filters__row shop-filters__row--tags">
             <p>Tags</p>
-            <div className="shop-filters__tags">
-              {availableTags.length === 0 ? <span className="shop-filters__empty">No tags available yet.</span> : availableTags.map(tag => (
-                <button
-                  type="button"
-                  key={tag}
-                  className={draftSelectedTags.includes(tag) ? `is-active` : ``}
-                  onClick={() => toggleTag(tag)}
-                >
-                  #{tag}
-                </button>
+            <input
+              aria-label="Search tags"
+              value={tagSearch}
+              onChange={event => setTagSearch(event.target.value)}
+              placeholder="Search tags"
+            />
+            <div className="shop-filters__tag-list">
+              {isLoadingFilters && availableTags.length === 0 ? <span className="shop-filters__empty">Loading tags...</span> : null}
+              {!isLoadingFilters && filteredTagOptions.length === 0 ? <span className="shop-filters__empty">No tags found.</span> : null}
+              {filteredTagOptions.map(tag => (
+                <label key={tag.value} className="shop-filters__checkbox">
+                  <input
+                    type="checkbox"
+                    checked={draftSelectedTags.includes(tag.value)}
+                    onChange={() => toggleTag(tag.value)}
+                  />
+                  <span>#{tag.value}</span>
+                  <small>{tag.count}</small>
+                </label>
               ))}
             </div>
           </div>
@@ -236,17 +368,25 @@ export function Shop() {
             </button>
             <button type="button" onClick={clearFilters}>Reset filters</button>
           </div>
+
           {hasInvalidPriceRange ? <p className="shop-results__state shop-results__state--error">Min price must be less than or equal to max price.</p> : null}
           {hasPendingFilterChanges ? <p className="shop-filters__hint">You changed filters. Click Apply filters to refresh results.</p> : null}
         </aside>
 
         <section className="shop-results">
+          <div className="shop-results__summary">
+            <p className="shop-results__state">
+              {pageState.totalItems} products
+              {pageState.totalPages > 0 ? ` • page ${pageState.index} of ${pageState.totalPages}` : ``}
+            </p>
+          </div>
+
           {isLoading ? <p className="shop-results__state">Loading products...</p> : null}
           {error ? <p className="shop-results__state shop-results__state--error">{error}</p> : null}
-          {!isLoading && !error && sortedProducts.length === 0 ? <p className="shop-results__state">No products match your filters.</p> : null}
+          {!isLoading && !error && products.length === 0 ? <p className="shop-results__state">No products match your filters.</p> : null}
 
           <div className="shop-results__grid">
-            {sortedProducts.map(product => (
+            {products.map(product => (
               <ShopCard
                 key={product.id}
                 name={product.name}
@@ -258,6 +398,27 @@ export function Shop() {
               />
             ))}
           </div>
+
+          {pageState.totalPages > 1 ? (
+            <div className="shop-pagination">
+              <button type="button" onClick={() => goToPage(pageState.index - 1)} disabled={!pageState.hasPrev}>
+                Previous
+              </button>
+              {pageIndexes.map(page => (
+                <button
+                  key={page}
+                  type="button"
+                  className={page === pageState.index ? `is-active` : ``}
+                  onClick={() => goToPage(page)}
+                >
+                  {page}
+                </button>
+              ))}
+              <button type="button" onClick={() => goToPage(pageState.index + 1)} disabled={!pageState.hasNext}>
+                Next
+              </button>
+            </div>
+          ) : null}
         </section>
       </div>
     </section>
