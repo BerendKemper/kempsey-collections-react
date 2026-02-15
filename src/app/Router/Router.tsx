@@ -12,6 +12,7 @@ export function Router() {
   const { session, isLoading } = useSession();
   const isAuthenticated = Boolean(session?.authenticated);
   const isAdmin = session?.roles?.includes(`admin`) || session?.roles?.includes(`owner`);
+  const canManageArticles = isAdmin || session?.roles?.includes(`seller`);
 
   if (isLoading) {
     return <div>Checking session...</div>;
@@ -26,7 +27,7 @@ export function Router() {
           <Route path="/shop/articles/:slug" element={<ShopArticlePage />} />
           {isAuthenticated ? <Route path="/settings" element={<UserSettingsPage />} /> : null}
           {isAuthenticated && isAdmin ? <Route path="/admin/users" element={<AdminUsersPage />} /> : null}
-          {isAuthenticated && isAdmin ? <Route path="/shop/articles/new" element={<ShopArticlePage />} /> : null}
+          {isAuthenticated && canManageArticles ? <Route path="/shop/articles/new" element={<ShopArticlePage />} /> : null}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

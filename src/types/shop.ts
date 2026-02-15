@@ -5,6 +5,8 @@ export interface ShopProduct {
   description: string | null;
   priceCents: number;
   currency: string;
+  authorUserId: string | null;
+  authorDisplayName: string | null;
   imageId: string | null;
   imageUrl: string | null;
   tags: string[];
@@ -39,6 +41,7 @@ export interface ShopFilterOption {
 export interface ShopFiltersResponse {
   tags: ShopFilterOption[];
   currencies: ShopFilterOption[];
+  authors: Array<ShopFilterOption & { label: string }>;
   updatedAt: number;
   cacheTtlSeconds: number;
 }

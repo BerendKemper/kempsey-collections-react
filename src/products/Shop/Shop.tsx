@@ -10,6 +10,7 @@ type SortKey = `date` | `priceAsc` | `priceDesc` | `name` | `priceCurrency` | `p
 type AppliedFilters = {
   search: string;
   selectedTags: string[];
+  selectedAuthorUserIds: string[];
   minPriceCents: number | null;
   maxPriceCents: number | null;
   sortBy: SortKey;
@@ -60,6 +61,10 @@ function normalizeTagSelection(tags: string[]): string[] {
   return [...new Set(tags)].sort((a, b) => a.localeCompare(b));
 }
 
+function normalizeIdSelection(values: string[]): string[] {
+  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
+}
+
 function parsePositiveInt(raw: string | null, fallback: number): number {
   if (!raw) return fallback;
   const parsed = Number(raw);
@@ -89,10 +94,20 @@ function parseAppliedFiltersFromSearchParams(searchParams: URLSearchParams): App
         .filter(Boolean)
     )
     : [];
+  const authorsRaw = searchParams.get(`authors`);
+  const authorUserIds = authorsRaw
+    ? normalizeIdSelection(
+      authorsRaw
+        .split(`,`)
+        .map(value => value.trim())
+        .filter(Boolean)
+    )
+    : [];
 
   return {
     search: searchParams.get(`search`)?.trim() ?? ``,
     selectedTags: tags,
+    selectedAuthorUserIds: authorUserIds,
     minPriceCents: parseNullableNonNegativeInt(searchParams.get(`minPriceCents`)),
     maxPriceCents: parseNullableNonNegativeInt(searchParams.get(`maxPriceCents`)),
     sortBy: parseSortKey(searchParams.get(`sortBy`)),
@@ -106,6 +121,7 @@ function buildSearchParamsFromAppliedFilters(filters: AppliedFilters): URLSearch
 
   if (filters.search) params.set(`search`, filters.search);
   if (filters.selectedTags.length > 0) params.set(`tags`, filters.selectedTags.join(`,`));
+  if (filters.selectedAuthorUserIds.length > 0) params.set(`authors`, filters.selectedAuthorUserIds.join(`,`));
   if (filters.minPriceCents !== null) params.set(`minPriceCents`, String(filters.minPriceCents));
   if (filters.maxPriceCents !== null) params.set(`maxPriceCents`, String(filters.maxPriceCents));
   if (filters.sortBy !== `date`) params.set(`sortBy`, filters.sortBy);
@@ -119,6 +135,7 @@ function areFiltersEqual(a: AppliedFilters, b: AppliedFilters): boolean {
   return (
     a.search === b.search &&
     a.selectedTags.join(`,`) === b.selectedTags.join(`,`) &&
+    a.selectedAuthorUserIds.join(`,`) === b.selectedAuthorUserIds.join(`,`) &&
     a.minPriceCents === b.minPriceCents &&
     a.maxPriceCents === b.maxPriceCents &&
     a.sortBy === b.sortBy &&
@@ -176,13 +193,16 @@ export function Shop() {
   const [products, setProducts] = useState<ShopProduct[]>([]);
   const [pageState, setPageState] = useState<PageState>(DEFAULT_PAGE_STATE);
   const [availableTags, setAvailableTags] = useState<ShopFilterOption[]>(readCachedTags);
+  const [availableAuthors, setAvailableAuthors] = useState<Array<ShopFilterOption & { label: string }>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingFilters, setIsLoadingFilters] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tagSearch, setTagSearch] = useState(``);
+  const [authorSearch, setAuthorSearch] = useState(``);
 
   const [draftSearch, setDraftSearch] = useState(initialFilters.search);
   const [draftSelectedTags, setDraftSelectedTags] = useState<string[]>(initialFilters.selectedTags);
+  const [draftSelectedAuthorUserIds, setDraftSelectedAuthorUserIds] = useState<string[]>(initialFilters.selectedAuthorUserIds);
   const [draftMinPrice, setDraftMinPrice] = useState<number | null>(
     initialFilters.minPriceCents !== null ? initialFilters.minPriceCents / 100 : null
   );
@@ -199,6 +219,7 @@ export function Shop() {
     setAppliedFilters(current => (areFiltersEqual(current, fromUrl) ? current : fromUrl));
     setDraftSearch(fromUrl.search);
     setDraftSelectedTags(fromUrl.selectedTags);
+    setDraftSelectedAuthorUserIds(fromUrl.selectedAuthorUserIds);
     setDraftMinPrice(fromUrl.minPriceCents !== null ? fromUrl.minPriceCents / 100 : null);
     setDraftMaxPrice(fromUrl.maxPriceCents !== null ? fromUrl.maxPriceCents / 100 : null);
     setDraftSortBy(fromUrl.sortBy);
@@ -222,6 +243,7 @@ export function Shop() {
         if (cancelled) return;
         const sortedTags = sortTagOptionsByCount(data.tags);
         setAvailableTags(sortedTags);
+        setAvailableAuthors(data.authors);
         writeCachedTags(sortedTags);
       } catch {
         // Use cached values if request fails
@@ -247,6 +269,7 @@ export function Shop() {
         const response = await fetchShopProductsPage({
           name: appliedFilters.search,
           tags: appliedFilters.selectedTags,
+          authorUserIds: appliedFilters.selectedAuthorUserIds,
           minPriceCents: appliedFilters.minPriceCents ?? undefined,
           maxPriceCents: appliedFilters.maxPriceCents ?? undefined,
           isActive: 1,
@@ -283,6 +306,14 @@ export function Shop() {
     return availableTags.filter(tag => tag.value.toLowerCase().includes(search));
   }, [availableTags, tagSearch]);
 
+  const filteredAuthorOptions = useMemo(() => {
+    const search = authorSearch.trim().toLowerCase();
+    if (!search) return availableAuthors;
+    return availableAuthors.filter(author =>
+      author.label.toLowerCase().includes(search)
+    );
+  }, [availableAuthors, authorSearch]);
+
   const draftMinPriceCents = normalizePriceToCents(draftMinPrice);
   const draftMaxPriceCents = normalizePriceToCents(draftMaxPrice);
   const hasInvalidPriceRange =
@@ -293,10 +324,13 @@ export function Shop() {
   const hasPendingFilterChanges = useMemo(() => {
     const normalizedDraftTags = normalizeTagSelection(draftSelectedTags);
     const normalizedAppliedTags = normalizeTagSelection(appliedFilters.selectedTags);
+    const normalizedDraftAuthors = normalizeIdSelection(draftSelectedAuthorUserIds);
+    const normalizedAppliedAuthors = normalizeIdSelection(appliedFilters.selectedAuthorUserIds);
 
     return (
       draftSearch.trim() !== appliedFilters.search ||
       normalizedDraftTags.join(`,`) !== normalizedAppliedTags.join(`,`) ||
+      normalizedDraftAuthors.join(`,`) !== normalizedAppliedAuthors.join(`,`) ||
       draftMinPriceCents !== appliedFilters.minPriceCents ||
       draftMaxPriceCents !== appliedFilters.maxPriceCents ||
       draftSortBy !== appliedFilters.sortBy ||
@@ -307,12 +341,14 @@ export function Shop() {
     appliedFilters.minPriceCents,
     appliedFilters.pageSize,
     appliedFilters.search,
+    appliedFilters.selectedAuthorUserIds,
     appliedFilters.selectedTags,
     appliedFilters.sortBy,
     draftMaxPriceCents,
     draftMinPriceCents,
     draftPageSize,
     draftSearch,
+    draftSelectedAuthorUserIds,
     draftSelectedTags,
     draftSortBy
   ]);
@@ -321,12 +357,21 @@ export function Shop() {
     setDraftSelectedTags(current => (current.includes(tag) ? current.filter(value => value !== tag) : [...current, tag]));
   };
 
+  const toggleAuthor = (authorUserId: string) => {
+    setDraftSelectedAuthorUserIds(current => (
+      current.includes(authorUserId)
+        ? current.filter(value => value !== authorUserId)
+        : [...current, authorUserId]
+    ));
+  };
+
   const applyFilters = () => {
     if (hasInvalidPriceRange) return;
 
     setAppliedFilters({
       search: draftSearch.trim(),
       selectedTags: normalizeTagSelection(draftSelectedTags),
+      selectedAuthorUserIds: normalizeIdSelection(draftSelectedAuthorUserIds),
       minPriceCents: draftMinPriceCents,
       maxPriceCents: draftMaxPriceCents,
       sortBy: draftSortBy,
@@ -338,14 +383,17 @@ export function Shop() {
   const clearFilters = () => {
     setDraftSearch(``);
     setDraftSelectedTags([]);
+    setDraftSelectedAuthorUserIds([]);
     setDraftMinPrice(null);
     setDraftMaxPrice(null);
     setDraftSortBy(`date`);
     setDraftPageSize(24);
     setTagSearch(``);
+    setAuthorSearch(``);
     setAppliedFilters({
       search: ``,
       selectedTags: [],
+      selectedAuthorUserIds: [],
       minPriceCents: null,
       maxPriceCents: null,
       sortBy: `date`,
@@ -463,6 +511,31 @@ export function Shop() {
                   />
                   <span>#{tag.value}</span>
                   <small>{tag.count}</small>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="shop-filters__row shop-filters__row--tags">
+            <p>Authors</p>
+            <input
+              aria-label="Search authors"
+              value={authorSearch}
+              onChange={event => setAuthorSearch(event.target.value)}
+              placeholder="Search authors"
+            />
+            <div className="shop-filters__tag-list">
+              {isLoadingFilters && availableAuthors.length === 0 ? <span className="shop-filters__empty">Loading authors...</span> : null}
+              {!isLoadingFilters && filteredAuthorOptions.length === 0 ? <span className="shop-filters__empty">No authors found.</span> : null}
+              {filteredAuthorOptions.map(author => (
+                <label key={author.value} className="shop-filters__checkbox">
+                  <input
+                    type="checkbox"
+                    checked={draftSelectedAuthorUserIds.includes(author.value)}
+                    onChange={() => toggleAuthor(author.value)}
+                  />
+                  <span>{author.label}</span>
+                  <small>{author.count}</small>
                 </label>
               ))}
             </div>

@@ -39,6 +39,7 @@ export function ShopArticlePage() {
   const navigate = useNavigate();
   const { session } = useSession();
   const isAdmin = session?.roles?.includes(`admin`) || session?.roles?.includes(`owner`);
+  const canManageArticles = isAdmin || session?.roles?.includes(`seller`);
   const isCreateMode = slug === `new` || location.pathname === `/shop/articles/new`;
 
   const [article, setArticle] = useState<ShopProduct | null>(null);
@@ -59,6 +60,11 @@ export function ShopArticlePage() {
   const [isActive, setIsActive] = useState(true);
   const [imageId, setImageId] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  const canEditCurrentArticle = Boolean(
+    session?.userId &&
+    (isAdmin || (article?.authorUserId && article.authorUserId === session.userId))
+  );
 
   const resolvedSlug = useMemo(() => slugify(slugInput || name), [name, slugInput]);
 
@@ -122,7 +128,7 @@ export function ShopArticlePage() {
   };
 
   const handleSave = async () => {
-    if (!isAdmin) return;
+    if (!canManageArticles) return;
     const validationError = validateRequired();
     if (validationError) {
       setStatus({ tone: `error`, message: validationError });
@@ -184,7 +190,7 @@ export function ShopArticlePage() {
   };
 
   const handleDelete = async () => {
-    if (!isAdmin) return;
+    if (!canEditCurrentArticle) return;
     const targetSlug = article?.slug ?? slug;
     if (!targetSlug) return;
     if (!window.confirm(`Delete article '${targetSlug}'?`)) return;
@@ -207,8 +213,8 @@ export function ShopArticlePage() {
     return <section className="shop-article"><p className="shop-article__error">{status.message}</p></section>;
   }
 
-  if (isCreateMode && !isAdmin) {
-    return <section className="shop-article"><p className="shop-article__error">Only admins can create articles.</p></section>;
+  if (isCreateMode && !canManageArticles) {
+    return <section className="shop-article"><p className="shop-article__error">Only admin, owner, or seller users can create articles.</p></section>;
   }
 
   const editing = isCreateMode || isEditing;
@@ -220,6 +226,8 @@ export function ShopArticlePage() {
     description: description.trim() || null,
     priceCents: Math.round((price ?? 0) * 100),
     currency: (currency.trim().toUpperCase() || `EUR`).slice(0, 3),
+    authorUserId: article?.authorUserId ?? session?.userId ?? null,
+    authorDisplayName: article?.authorDisplayName ?? session?.displayName ?? null,
     imageId,
     imageUrl,
     tags: draftTags,
@@ -233,7 +241,7 @@ export function ShopArticlePage() {
       <header className="shop-article__header">
         <h1>{editing ? `Article editor` : article?.name ?? `Article`}</h1>
         {status.message ? <p className={`shop-article__status shop-article__status--${status.tone}`}>{status.message}</p> : null}
-        {!isCreateMode && isAdmin ? (
+        {!isCreateMode && canEditCurrentArticle ? (
           <div className="shop-article__actions">
             <button type="button" onClick={() => setIsEditing(current => !current)}>
               {isEditing ? `Cancel edit` : `Edit article`}
@@ -246,7 +254,7 @@ export function ShopArticlePage() {
       <article className="shop-article__content">
         {editing ? (
           <>
-            {isAdmin ? (
+            {canManageArticles ? (
               <div className="shop-article__tabs">
                 <button
                   type="button"
@@ -311,6 +319,7 @@ export function ShopArticlePage() {
               <div className="shop-article__viewer">
                 {previewArticle.imageUrl ? <img src={previewArticle.imageUrl} alt={previewArticle.name} className="shop-article__hero" /> : null}
                 <p className="shop-article__meta">{`${(previewArticle.priceCents / 100).toFixed(2)} ${previewArticle.currency}`}</p>
+                <p className="shop-article__meta">{`Author: ${previewArticle.authorDisplayName ?? `Unknown`}`}</p>
                 <p>{previewArticle.description ?? `No description.`}</p>
                 <div className="shop-article__tags">
                   {previewArticle.tags.length > 0 ? previewArticle.tags.map(tag => <span key={tag}>#{tag}</span>) : <span>#untagged</span>}
@@ -322,6 +331,7 @@ export function ShopArticlePage() {
           <div className="shop-article__viewer">
             {article?.imageUrl ? <img src={article.imageUrl} alt={article.name} className="shop-article__hero" /> : null}
             <p className="shop-article__meta">{article ? `${(article.priceCents / 100).toFixed(2)} ${article.currency}` : ``}</p>
+            <p className="shop-article__meta">{`Author: ${article?.authorDisplayName ?? `Unknown`}`}</p>
             <p>{article?.description}</p>
             <div className="shop-article__tags">
               {article?.tags.map(tag => <span key={tag}>#{tag}</span>)}

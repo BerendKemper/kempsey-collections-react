@@ -15,6 +15,7 @@ const API_ORIGIN = import.meta.env.VITE_AUTH_API_ORIGIN;
 export interface ShopProductQuery {
   name?: string;
   tags?: string[];
+  authorUserIds?: string[];
   minPriceCents?: number;
   maxPriceCents?: number;
   currency?: string;
@@ -46,6 +47,17 @@ function buildShopProductQueryString(query?: ShopProductQuery): string {
     )];
     if (normalizedTags.length > 0) {
       params.set(`tags`, normalizedTags.join(`,`));
+    }
+  }
+
+  if (Array.isArray(query.authorUserIds)) {
+    const normalizedAuthorIds = [...new Set(
+      query.authorUserIds
+        .map(authorUserId => authorUserId.trim())
+        .filter(Boolean)
+    )];
+    if (normalizedAuthorIds.length > 0) {
+      params.set(`author_user_ids`, normalizedAuthorIds.join(`,`));
     }
   }
 
@@ -182,4 +194,3 @@ export async function deleteShopArticle(selector: { id?: string; slug?: string }
 
   return parseJson<DeleteShopProductResponse>(response);
 }
-
