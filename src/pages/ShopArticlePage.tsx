@@ -135,6 +135,7 @@ export function ShopArticlePage() {
       if (file) {
         const uploaded = await uploadProductImage(file);
         effectiveImageId = uploaded.imageId;
+        setImageUrl(uploaded.url);
         setFile(null);
       }
 
