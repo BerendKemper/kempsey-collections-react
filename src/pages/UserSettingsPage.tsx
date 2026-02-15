@@ -150,7 +150,7 @@ export function UserSettingsPage() {
           </div>
           <div className="user-settings__roles">
             {roles.length === 0 ? (
-              <p className="user-settings__empty">No roles assigned yet.</p>
+              <p className="user-settings__empty">Base user access is implicit for signed-in accounts.</p>
             ) : (
               roles.map(role => (
                 <span key={role} className="role-pill">
@@ -178,3 +178,4 @@ export function UserSettingsPage() {
     </section>
   );
 }
+

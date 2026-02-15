@@ -99,9 +99,9 @@
 
 .admin-users__row {
   display: grid;
-  grid-template-columns: 1.2fr 1.6fr 1.2fr 0.7fr;
+  grid-template-columns: 1.1fr 1.5fr 1.7fr 0.6fr;
   gap: 12px;
-  align-items: center;
+  align-items: start;
   padding: 12px 0;
   border-bottom: 1px solid rgba(148, 163, 184, 0.2);
 }
@@ -110,6 +110,7 @@
   font-weight: 600;
   color: var(--text-secondary);
   border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+  align-items: center;
 }
 
 .admin-users__roles {
@@ -118,9 +119,72 @@
   gap: 6px;
 }
 
+.admin-users__roles--editable {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.admin-users__role-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.4);
+  width: 100%;
+}
+
+.admin-users__checkboxes {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-users__checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.admin-users__role-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-users__button {
+  border-radius: 8px;
+  border: 1px solid var(--interactive-border-secondary-default);
+  padding: 6px 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-users__button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.admin-users__button--primary {
+  background: #2563eb;
+  border-color: #1d4ed8;
+  color: white;
+}
+
+.admin-users__button--secondary {
+  background: transparent;
+  color: inherit;
+}
+
+.admin-users__hint {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
 .admin-users__status {
   text-transform: capitalize;
   font-weight: 600;
+  margin-top: 4px;
 }
 
 .admin-users__status--active {
