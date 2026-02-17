@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const AUTH_API_ORIGIN = import.meta.env.VITE_AUTH_API_ORIGIN;
+const DEV_MOCK_SESSION_ENABLED =
+  import.meta.env.DEV &&
+  import.meta.env.VITE_DEV_MOCK_SESSION === `1`;
 export const AUTH_SESSION_CHANGED_EVENT = `auth:session-changed`;
 
 export type SessionState = {
@@ -19,6 +22,15 @@ type SessionResult = {
   refreshSession: () => Promise<SessionState | null>;
 };
 
+const DEV_MOCK_SESSION: SessionState = {
+  authenticated: true,
+  userId: `dev-local-user`,
+  roles: [`owner`, `admin`, `seller`],
+  provider: `dev-mock`,
+  displayName: `Dev Owner`,
+  email: `dev-owner@local`,
+};
+
 export function useSession(): SessionResult {
   const [session, setSession] = useState<SessionState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -29,6 +41,12 @@ export function useSession(): SessionResult {
   const refreshSession = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+
+    if (DEV_MOCK_SESSION_ENABLED) {
+      setSession(DEV_MOCK_SESSION);
+      setIsLoading(false);
+      return DEV_MOCK_SESSION;
+    }
 
     try {
       const response = await fetch(sessionEndpoint, {

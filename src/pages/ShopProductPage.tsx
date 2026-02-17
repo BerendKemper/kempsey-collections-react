@@ -60,7 +60,9 @@ export function ShopProductPage() {
   const [isActive, setIsActive] = useState(true);
   const [productImages, setProductImages] = useState<Array<{ imageId: string; imageUrl: string }>>([]);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [isDragActive, setIsDragActive] = useState(false);
   const touchStartXRef = useRef<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const canEditCurrentProduct = Boolean(
     session?.userId &&
@@ -259,6 +261,14 @@ export function ShopProductPage() {
     showPrevImage();
   };
 
+  const setPendingFile = (nextFile: File | null) => {
+    setFile(nextFile);
+  };
+
+  const openFileDialog = () => {
+    fileInputRef.current?.click();
+  };
+
   const previewProduct: ShopProduct = {
     id: product?.id ?? `draft`,
     slug: resolvedSlug || product?.slug || `draft`,
@@ -359,7 +369,53 @@ export function ShopProductPage() {
                       ))}
                     </div>
                   ) : null}
-                  <input type="file" accept="image/*" onChange={event => setFile(event.target.files?.[0] ?? null)} />
+                  <div
+                    className={`shop-product__upload-dropzone ${isDragActive ? `is-drag-active` : ``}`}
+                    onDragOver={event => {
+                      event.preventDefault();
+                      setIsDragActive(true);
+                    }}
+                    onDragLeave={event => {
+                      event.preventDefault();
+                      setIsDragActive(false);
+                    }}
+                    onDrop={event => {
+                      event.preventDefault();
+                      setIsDragActive(false);
+                      const dropped = event.dataTransfer.files?.[0] ?? null;
+                      if (dropped && dropped.type.startsWith(`image/`)) {
+                        setPendingFile(dropped);
+                      }
+                    }}
+                  >
+                    <p className="shop-product__upload-icon" aria-hidden="true">+</p>
+                    <p className="shop-product__upload-title">Drag an image here</p>
+                    <p className="shop-product__upload-subtitle">
+                      or{` `}
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        className="shop-product__upload-link"
+                        onClick={openFileDialog}
+                        onKeyDown={event => {
+                          if (event.key === `Enter` || event.key === ` `) {
+                            event.preventDefault();
+                            openFileDialog();
+                          }
+                        }}
+                      >
+                        Upload a file
+                      </span>
+                    </p>
+                    {file ? <p className="shop-product__upload-filename">{file.name}</p> : null}
+                    <input
+                      ref={fileInputRef}
+                      className="shop-product__upload-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={event => setPendingFile(event.target.files?.[0] ?? null)}
+                    />
+                  </div>
                   {activeImage ? (
                     <button
                       type="button"
@@ -444,5 +500,4 @@ export function ShopProductPage() {
     </section>
   );
 }
-
 
